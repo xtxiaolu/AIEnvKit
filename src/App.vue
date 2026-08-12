@@ -232,16 +232,24 @@ function handleHelp() {
 
 <template>
   <div class="h-screen bg-slate-50 flex flex-row overflow-hidden">
-    <!-- 左侧：日志面板 -->
+    <!-- 左侧：标题 + 日志面板 -->
     <section class="w-[45%] min-w-[360px] max-w-[520px] bg-white border-r border-slate-200 flex flex-col">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-400 flex items-center justify-center">
-            <span class="text-white text-xs font-bold">AI</span>
+      <div class="px-5 py-5 border-b border-slate-100">
+        <div class="flex items-center gap-2.5 mb-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-400 flex items-center justify-center shadow-sm">
+            <span class="text-white text-sm font-bold">AI</span>
           </div>
-          <h1 class="text-base font-bold text-slate-800">AIEnvKit</h1>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">AIEnvKit</h1>
+            <p class="text-xs text-slate-500">Claude 一键配置</p>
+          </div>
         </div>
-        <span class="text-xs text-slate-400">执行日志</span>
+        <p class="text-sm text-slate-600 leading-relaxed">
+          填写右侧信息后，可先测试连接，再执行完整配置。执行日志将显示在这里。
+        </p>
+      </div>
+      <div class="px-5 py-2 border-b border-slate-100 bg-slate-50/50">
+        <span class="text-xs font-medium text-slate-500">执行日志</span>
       </div>
       <div class="flex-1 min-h-0 overflow-hidden">
         <LogPanel :logs="logs" class="h-full" />
@@ -251,11 +259,6 @@ function handleHelp() {
     <!-- 右侧：配置表单 -->
     <main class="flex-1 flex flex-col items-center justify-center px-8 py-6 overflow-y-auto">
       <div class="w-full max-w-md">
-        <header class="text-center mb-6">
-          <h2 class="text-2xl font-bold text-slate-900 mb-1">Claude 一键配置</h2>
-          <p class="text-sm text-slate-500">填写信息后，可先测试连接，再执行完整配置</p>
-        </header>
-
         <!-- 表单卡片 -->
         <FormCard v-model="form" class="mb-5" />
 
