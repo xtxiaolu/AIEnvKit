@@ -74,8 +74,8 @@ new_source = ICONS_DIR / "source-icon-square.png"
 filled_img.save(new_source)
 print(f"Saved square source: {new_source}")
 
-# Generate sizes
-SIZES = [16, 32, 64, 128, 256, 512, 1024]
+# Generate sizes (skip 32 and 128; we create 32x32.png and 128x128.png separately)
+SIZES = [16, 64, 256, 512, 1024]
 for s in SIZES:
     resized = filled_img.resize((s, s), Image.LANCZOS)
     resized.save(ICONS_DIR / f"icon-{s}.png")
@@ -83,7 +83,9 @@ for s in SIZES:
 
 # 32x32 and 128x128 named files used by tauri.conf.json
 filled_img.resize((32, 32), Image.LANCZOS).save(ICONS_DIR / "32x32.png")
+print("Saved 32x32.png")
 filled_img.resize((128, 128), Image.LANCZOS).save(ICONS_DIR / "128x128.png")
+print("Saved 128x128.png")
 
 # Generate .icns for macOS
 iconset_dir = ICONS_DIR / "icon.iconset"
