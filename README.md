@@ -2,11 +2,32 @@
 
 AI 模型环境一键配置工具，面向普通用户。下载一个文件，双击打开，填写 3 项信息，先测试连接，再一键完成 Claude Code 环境配置。
 
+## 下载安装
+
+> 以下地址来自 [GitHub Releases](https://github.com/xtxiaolu/AIEnvKit/releases)，请根据自己的系统选择对应版本下载。
+
+### macOS
+
+| 平台 | 下载文件 | 说明 |
+|---|---|---|
+| Apple Silicon (M1/M2/M3/M4) | [AIEnvKit_0.1.0_macOS_Apple_Silicon.zip](https://github.com/xtxiaolu/AIEnvKit/releases/download/v0.1.0/AIEnvKit_0.1.0_macOS_Apple_Silicon.zip) | 下载后解压，将 `AIEnvKit.app` 拖入「应用程序」文件夹 |
+| Intel (x86_64) | [AIEnvKit_0.1.0_macOS_Intel.zip](https://github.com/xtxiaolu/AIEnvKit/releases/download/v0.1.0/AIEnvKit_0.1.0_macOS_Intel.zip) | 下载后解压，将 `AIEnvKit.app` 拖入「应用程序」文件夹 |
+
+> macOS 首次打开若提示「无法打开」或「来自身份不明的开发者」，请前往「系统设置 → 隐私与安全性」点击「仍要打开」。
+
+### Windows
+
+| 平台 | 下载文件 | 说明 |
+|---|---|---|
+| Windows 10/11 (x64) | [AIEnvKit_0.1.0_Windows_x64_Setup.exe](https://github.com/xtxiaolu/AIEnvKit/releases/download/v0.1.0/AIEnvKit_0.1.0_Windows_x64_Setup.exe) | 下载后双击安装，按向导完成即可 |
+
+> Windows 首次运行若提示「Windows 已保护你的电脑」，点击「更多信息」→「仍要运行」即可（安装包未签名）。
+
 ## 界面预览
 
-![应用界面预览](./docs/screenshot.png)
+![应用界面预览](./image/AIEnvKit.png)
 
-> 截图占位位置：`docs/screenshot.png`
+> 截图占位位置：`image/AIEnvKit.png`
 
 - 窗口固定尺寸：480 × 680
 - 顶部：Logo + 标题 + 引导语
@@ -168,7 +189,31 @@ src-tauri/target/x86_64-pc-windows-msvc/release/bundle/aienvkit.exe  # 便携版
 
 ## 配置说明
 
-一键配置会写入以下内容：
+### 必填项（只需填写这三项）
+
+打开应用后，**只需要配置下面三个输入框**，其他选项保持默认即可：
+
+| 输入框 | 说明 | 示例（DeepSeek） |
+|---|---|---|
+| **API Key** | 你的 API 密钥 | `sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`（请填写你自己的 Key） |
+| **API 地址 (Base URL)** | API 服务地址 | `https://api.deepseek.com` |
+| **模型名称** | 要使用的模型 | `deepseek-v4-pro` |
+
+DeepSeek 完整配置示例：
+
+- **API 地址**：`https://api.deepseek.com`
+- **模型名称**：`deepseek-v4-pro`
+- **API Key**：这里填写你自己的 Key
+
+填写完成后，先点击 **「测试连接」**，看到连接成功后再点击 **「一键执行配置」**。
+
+### ⚠️ 代理使用特别提示
+
+- **没有梯子（VPN/代理）的用户请不要填写「代理」字段**，保持为空即可。
+- 「代理」仅用于已经拥有可用 HTTP/HTTPS 代理的用户，例如：`http://127.0.0.1:7890`。
+- 如果测试连接失败，请先检查 API Key、API 地址、模型名称是否填写正确；确认无误后再考虑是否需要代理。
+
+### 一键配置会写入的内容
 
 ```json
 {
