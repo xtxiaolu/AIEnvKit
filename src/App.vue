@@ -41,6 +41,7 @@ function addLog(status: LogItem["status"], message: string) {
 async function handleTest() {
   if (!canAction.value) return;
   testing.value = true;
+  const loadingIndex = logs.value.length;
   addLog("loading", "正在测试连接...");
 
   try {
@@ -49,9 +50,9 @@ async function handleTest() {
       apiKey: form.value.apiKey.trim(),
       modelName: form.value.modelName.trim(),
     });
-    addLog("success", result);
+    logs.value[loadingIndex] = { status: "success", message: result };
   } catch (err) {
-    addLog("error", String(err));
+    logs.value[loadingIndex] = { status: "error", message: String(err) };
   } finally {
     testing.value = false;
   }
@@ -61,7 +62,6 @@ async function handleConfigure() {
   if (!canAction.value) return;
 
   configuring.value = true;
-  logs.value = [];
   addLog("info", "正在检查环境...");
 
   try {
@@ -101,7 +101,6 @@ async function handleConfigure() {
 async function handleInstallNode(mirror: string, proxy: string) {
   showInstallNodeModal.value = false;
   configuring.value = true;
-  logs.value = [];
   addLog("loading", `正在一键安装 Node.js（${mirror === "official" ? "官方" : mirror === "npmmirror" ? "淘宝镜像" : mirror === "tencent" ? "腾讯镜像" : mirror}）...`);
 
   try {
@@ -179,17 +178,17 @@ async function proceedConfigure(status: EnvironmentStatus) {
   }
 
   // 开始执行配置
-  logs.value = [];
+  const startIndex = logs.value.length;
   const steps = [
-    { status: "loading" as const, message: "环境检测通过" },
-    { status: "loading" as const, message: "检查/安装 Claude Code CLI..." },
-    { status: "loading" as const, message: "备份原配置..." },
-    { status: "loading" as const, message: "写入 Claude Code 配置..." },
-    { status: "loading" as const, message: "设置环境变量..." },
-    { status: "loading" as const, message: "最终验证..." },
+    "环境检测通过",
+    "检查/安装 Claude Code CLI...",
+    "备份原配置...",
+    "写入 Claude Code 配置...",
+    "设置环境变量...",
+    "最终验证...",
   ];
 
-  steps.forEach((step) => addLog(step.status, step.message));
+  steps.forEach((message) => addLog("loading", message));
 
   const result = await invoke<string>("execute_configure", {
     apiKey: form.value.apiKey.trim(),
@@ -199,16 +198,16 @@ async function proceedConfigure(status: EnvironmentStatus) {
     proxy: form.value.proxy.trim(),
   });
 
-  logs.value = steps.map((s) => ({
-    status: "success" as const,
-    message: s.message
+  steps.forEach((message, index) => {
+    const successMessage = message
       .replace("通过", "✓")
       .replace("检查/安装 Claude Code CLI...", "Claude Code CLI 已就绪")
       .replace("备份原配置...", "原配置已备份")
       .replace("写入 Claude Code 配置...", "Claude Code 配置已写入")
       .replace("设置环境变量...", "环境变量已设置")
-      .replace("最终验证...", "最终验证通过"),
-  }));
+      .replace("最终验证...", "最终验证通过");
+    logs.value[startIndex + index] = { status: "success", message: successMessage };
+  });
   addLog("success", result);
   addLog("success", "配置完成！现在可以打开终端输入 claude 使用");
 }
