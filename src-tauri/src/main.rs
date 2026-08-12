@@ -4,7 +4,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
+use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -148,7 +149,7 @@ async fn test_connection(
     let res = client
         .get(&url)
         .header("Authorization", format!("Bearer {}", api_key))
-        .timeout(std::time::Duration::from_secs(15))
+        .timeout(std::time::Duration::from_secs(8))
         .send()
         .await
         .map_err(|e| format!("请求失败: {}", e))?;
@@ -384,10 +385,6 @@ fn check_persistent_env(status: &mut EnvVarsStatus) {
     }
 }
 
-fn check_env_configured() -> bool {
-    check_env_vars_status().all_set
-}
-
 fn get_shell_profile() -> PathBuf {
     if let Ok(shell) = std::env::var("SHELL") {
         let shell_name = std::path::Path::new(&shell)
@@ -439,9 +436,9 @@ async fn install_node(
 
 #[tauri::command]
 async fn open_node_download_page(app: tauri::AppHandle) -> Result<(), String> {
-    let shell = app.shell();
-    shell
-        .open("https://nodejs.org/", None)
+    let opener = tauri_plugin_opener::OpenerExt::opener(&app);
+    opener
+        .open_url("https://nodejs.org/", None::<&str>)
         .map_err(|e| format!("打开下载页面失败: {}", e))?;
     Ok(())
 }
@@ -451,6 +448,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             test_connection,
             execute_configure,

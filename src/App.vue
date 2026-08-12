@@ -231,83 +231,74 @@ function handleHelp() {
 </script>
 
 <template>
-  <div class="h-screen bg-slate-50 flex flex-col items-center px-6 py-4">
-    <!-- 头部：占 1/5 -->
-    <header class="flex-[1] flex flex-col items-center justify-center w-full max-w-md">
-      <div class="flex items-center justify-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden shadow-md">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 128 128"
-            fill="none"
-          >
-            <circle cx="64" cy="64" r="42" fill="#22c55e" />
-            <circle cx="47" cy="56" r="7" fill="#0f172a" />
-            <circle cx="81" cy="56" r="7" fill="#0f172a" />
-            <path
-              d="M 44 80 Q 64 96 84 80"
-              stroke="#0f172a"
-              stroke-width="5"
-              fill="none"
-              stroke-linecap="round"
-            />
-          </svg>
+  <div class="h-screen bg-slate-50 flex flex-row overflow-hidden">
+    <!-- 左侧：日志面板 -->
+    <section class="w-[45%] min-w-[360px] max-w-[520px] bg-white border-r border-slate-200 flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-400 flex items-center justify-center">
+            <span class="text-white text-xs font-bold">AI</span>
+          </div>
+          <h1 class="text-base font-bold text-slate-800">AIEnvKit</h1>
         </div>
-        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">AIEnvKit</h1>
+        <span class="text-xs text-slate-400">执行日志</span>
       </div>
-      <h2 class="text-lg font-semibold text-blue-600 mb-1">Claude 一键配置</h2>
-      <p class="text-sm text-slate-500">填写以下信息，可先测试连接，再执行完整配置</p>
-    </header>
-
-    <!-- 主体：占 4/5 -->
-    <main class="flex-[4] flex flex-col w-full max-w-md">
-      <!-- 表单卡片 -->
-      <FormCard v-model="form" class="mb-4" />
-
-      <!-- 按钮区 -->
-      <div class="flex gap-3 mb-4">
-        <StatusButton
-          variant="secondary"
-          :loading="testing"
-          :disabled="!canAction || configuring"
-          class="flex-1"
-          @click="handleTest"
-        >
-          测试连接
-        </StatusButton>
-        <StatusButton
-          variant="primary"
-          :loading="configuring"
-          :disabled="!canAction || testing"
-          class="flex-[1.3]"
-          @click="handleConfigure"
-        >
-          一键执行配置
-        </StatusButton>
+      <div class="flex-1 min-h-0 overflow-hidden">
+        <LogPanel :logs="logs" class="h-full" />
       </div>
+    </section>
 
-      <!-- 日志区 -->
-      <LogPanel :logs="logs" class="flex-1 min-h-[160px] mb-3" />
+    <!-- 右侧：配置表单 -->
+    <main class="flex-1 flex flex-col items-center justify-center px-8 py-6 overflow-y-auto">
+      <div class="w-full max-w-md">
+        <header class="text-center mb-6">
+          <h2 class="text-2xl font-bold text-slate-900 mb-1">Claude 一键配置</h2>
+          <p class="text-sm text-slate-500">填写信息后，可先测试连接，再执行完整配置</p>
+        </header>
 
-      <!-- 底部 -->
-      <footer class="flex justify-center items-center gap-6 text-sm text-slate-500 py-2 border-t border-slate-200">
-        <button
-          class="flex items-center gap-1 hover:text-blue-600 transition-colors"
-          @click="handleRestore"
-        >
-          <span>↩</span>
-          <span>恢复备份</span>
-        </button>
-        <button
-          class="flex items-center gap-1 hover:text-blue-600 transition-colors"
-          @click="handleHelp"
-        >
-          <span>?</span>
-          <span>查看帮助</span>
-        </button>
-      </footer>
+        <!-- 表单卡片 -->
+        <FormCard v-model="form" class="mb-5" />
+
+        <!-- 按钮区 -->
+        <div class="flex gap-3 mb-4">
+          <StatusButton
+            variant="secondary"
+            :loading="testing"
+            :disabled="!canAction || configuring"
+            class="flex-1"
+            @click="handleTest"
+          >
+            测试连接
+          </StatusButton>
+          <StatusButton
+            variant="primary"
+            :loading="configuring"
+            :disabled="!canAction || testing"
+            class="flex-[1.3]"
+            @click="handleConfigure"
+          >
+            一键执行配置
+          </StatusButton>
+        </div>
+
+        <!-- 底部 -->
+        <footer class="flex justify-center items-center gap-6 text-sm text-slate-500 py-3 border-t border-slate-200">
+          <button
+            class="flex items-center gap-1 hover:text-blue-600 transition-colors"
+            @click="handleRestore"
+          >
+            <span>↩</span>
+            <span>恢复备份</span>
+          </button>
+          <button
+            class="flex items-center gap-1 hover:text-blue-600 transition-colors"
+            @click="handleHelp"
+          >
+            <span>?</span>
+            <span>查看帮助</span>
+          </button>
+        </footer>
+      </div>
     </main>
 
     <InstallNodeModal

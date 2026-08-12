@@ -21,8 +21,8 @@ watch(
 </script>
 
 <template>
-  <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4">
-    <div ref="logContainer" class="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+  <div class="bg-white h-full flex flex-col p-4">
+    <div ref="logContainer" class="flex-1 space-y-2.5 overflow-y-auto pr-1 min-h-0">
       <div
         v-for="(log, index) in logs"
         :key="index"
