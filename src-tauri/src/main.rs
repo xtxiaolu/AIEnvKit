@@ -329,7 +329,7 @@ fn check_persistent_env(status: &mut EnvVarsStatus) {
     use std::process::Command;
 
     // Windows：读取用户环境变量（通过注册表）
-    let keys = [
+    let mut keys = [
         ("ANTHROPIC_AUTH_TOKEN", &mut status.auth_token_set),
         ("ANTHROPIC_BASE_URL", &mut status.base_url_set),
         ("ANTHROPIC_MODEL", &mut status.model_set),
