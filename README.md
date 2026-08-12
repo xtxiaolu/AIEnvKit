@@ -4,9 +4,14 @@ AI 模型环境一键配置工具，面向普通用户。下载一个文件，�
 
 ## 界面预览
 
+![应用界面预览](./docs/screenshot.png)
+
+> 截图占位位置：`docs/screenshot.png`
+
 - 窗口固定尺寸：480 × 680
 - 顶部：Logo + 标题 + 引导语
 - 中部：API Key / API 地址 / 模型名称 输入框
+- 高级选项：npm 镜像 / 代理地址（可选，方便国内网络环境）
 - 按钮：测试连接（次要）、一键执行配置（主按钮）
 - 底部：实时执行日志 + 恢复备份 / 查看帮助
 
@@ -16,21 +21,24 @@ AI 模型环境一键配置工具，面向普通用户。下载一个文件，�
 
 点击「一键执行配置」后，会按顺序检查并弹窗确认：
 
-1. **Node.js / npm 检查**
-   - 未安装 → 弹窗提示「需要 Node.js 才能安装 Claude Code CLI，是否打开下载页面？」
+1. **Node.js / npm 检查（支持 GUI 内 PATH 隔离检测）**
+   - 未安装 → 弹出「缺少 Node.js」选择框：
+     - **一键安装 Node.js**：自动从指定镜像下载并安装到 `~/.aienvkit/node`（macOS）或 `%USERPROFILE%\.aienvkit\node`（Windows），不污染系统环境
+     - **打开官方下载页面**：跳转 [nodejs.org](https://nodejs.org/) 手动安装
+     - **取消**：返回主界面
    - 已安装 → 继续下一步
 2. **Claude Code CLI 检查**
    - 已安装 → 弹窗提示「Claude 已安装（版本 x.x.x），是否重新安装并重新配置？」，提供「重新安装」和「取消」按钮
    - 未安装 → 直接安装
 3. **环境变量检查**
-   - 已配置 → 弹窗提示「检测到已存在 AIEnvKit 环境变量配置，是否重新配置？」，提供「重新配置」和「取消」按钮
+   - 已配置 → 弹窗提示「检测到已存在 AIEnvKit 生成的环境变量配置，重新配置前会自动备份原配置。是否继续？」，提供「重新配置（自动备份）」和「取消」按钮
    - 未配置 → 直接配置
 4. 全部确认后，才执行完整配置流程。
 
 ### 完整配置流程
 
 1. **环境检测**：检测 Node.js、npm、Claude CLI、网络
-2. **安装/升级 Claude Code CLI**
+2. **安装/升级 Claude Code CLI**：支持 npm 镜像与代理设置
 3. **备份原配置**：备份 `settings.json` 和 shell/PowerShell profile
 4. **写入 Claude Code 配置**：写入 `~/.claude/settings.json`（macOS）或 `%USERPROFILE%\.claude\settings.json`（Windows）
 5. **设置环境变量**：写入 shell profile / PowerShell profile / Windows 用户环境变量
@@ -39,6 +47,24 @@ AI 模型环境一键配置工具，面向普通用户。下载一个文件，�
 ### 测试连接
 
 只发送一次 API 请求到 `/models`，不修改任何配置。
+
+### 一键安装 Node.js
+
+当系统未安装 Node.js 时，应用提供一键安装：
+
+- **镜像选择**：官方 / 淘宝镜像（npmmirror，国内推荐）/ 腾讯镜像
+- **代理支持**：可填写 HTTP/HTTPS 代理地址，如 `http://127.0.0.1:7890`
+- **安装位置**：
+  - macOS：`~/.aienvkit/node`
+  - Windows：`%USERPROFILE%\.aienvkit\node`
+- **PATH 处理**：安装完成后会自动将该 Node.js 加入后续配置脚本的 PATH，并在 shell profile / PowerShell profile 中持久化
+
+### Claude CLI 镜像 / 代理
+
+在「一键执行配置」前，可在高级选项中设置 npm 镜像和代理：
+
+- npm 镜像会作用于 `npm install -g @anthropic-ai/claude-code`
+- 代理会同时设置 `proxy` 和 `https-proxy`
 
 ## 技术栈
 
@@ -58,6 +84,7 @@ AIEnvKit/
 │   ├── App.vue
 │   ├── components/
 │   │   ├── FormCard.vue
+│   │   ├── InstallNodeModal.vue
 │   │   ├── LogPanel.vue
 │   │   └── StatusButton.vue
 │   ├── main.ts
@@ -68,14 +95,18 @@ AIEnvKit/
 │   ├── Cargo.toml
 │   ├── tauri.conf.json
 │   ├── capabilities/
-│   └── icons/
+│   └── icons/              # 应用图标资源
 ├── scripts/                # 跨平台配置脚本
 │   ├── macos/
 │   │   ├── set-env.sh
+│   │   ├── install-node.sh
 │   │   └── restore-backup.sh
 │   └── windows/
 │       ├── set-env.ps1
+│       ├── install-node.ps1
 │       └── restore-backup.ps1
+├── docs/                   # 文档图片占位目录
+│   └── screenshot.png
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js

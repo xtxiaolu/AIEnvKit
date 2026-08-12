@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -12,17 +12,32 @@ struct ConfigPayload {
     api_key: String,
     base_url: String,
     model_name: String,
+    #[serde(default)]
+    npm_mirror: String,
+    #[serde(default)]
+    proxy: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
 struct EnvironmentStatus {
     node_installed: bool,
     node_version: String,
+    node_path: String,
     npm_installed: bool,
     npm_version: String,
     claude_installed: bool,
     claude_version: String,
     env_configured: bool,
+    env_vars_status: EnvVarsStatus,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct EnvVarsStatus {
+    auth_token_set: bool,
+    base_url_set: bool,
+    model_set: bool,
+    all_set: bool,
+    source: String,
 }
 
 // 获取 resources 目录下的跨平台脚本路径
@@ -162,7 +177,10 @@ async fn execute_configure(
     let base_url = payload.base_url.trim();
     let model_name = payload.model_name.trim();
 
-    let args: Vec<&str> = vec![api_key, base_url, model_name];
+    let npm_mirror = payload.npm_mirror.trim();
+    let proxy = payload.proxy.trim();
+
+    let args: Vec<&str> = vec![api_key, base_url, model_name, npm_mirror, proxy];
 
     let _ = window.emit("configure-step", "环境检测");
     let _ = window.emit("configure-step", "检查 Claude Code CLI");
@@ -195,62 +213,179 @@ fn get_claude_path() -> Result<String, String> {
 
 #[tauri::command]
 async fn check_environment() -> Result<EnvironmentStatus, String> {
-    // 检测 Node.js
-    let (node_installed, node_version) = match Command::new("node").arg("--version").output() {
-        Ok(output) if output.status.success() => {
-            let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            (true, ver)
-        }
-        _ => (false, "未安装".to_string()),
-    };
+    // 通过登录 shell 检测，确保能读取 .zshrc / .bash_profile 中的 PATH
+    let (node_installed, node_version, node_path) = detect_program("node --version");
+    let (npm_installed, npm_version, _npm_path) = detect_program("npm --version");
+    let (claude_installed, claude_version, _claude_path) = detect_program("claude --version");
 
-    // 检测 npm
-    let (npm_installed, npm_version) = match Command::new("npm").arg("--version").output() {
-        Ok(output) if output.status.success() => {
-            let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            (true, ver)
-        }
-        _ => (false, "未安装".to_string()),
-    };
-
-    // 检测 Claude Code CLI
-    let (claude_installed, claude_version) = match Command::new("claude").arg("--version").output() {
-        Ok(output) if output.status.success() => {
-            let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            (true, ver)
-        }
-        _ => (false, "未安装".to_string()),
-    };
-
-    // 检测环境变量是否已配置
-    let env_configured = check_env_configured();
+    let env_vars_status = check_env_vars_status();
 
     Ok(EnvironmentStatus {
         node_installed,
         node_version,
+        node_path,
         npm_installed,
         npm_version,
         claude_installed,
         claude_version,
-        env_configured,
+        env_configured: env_vars_status.all_set,
+        env_vars_status,
     })
 }
 
-fn check_env_configured() -> bool {
-    // 检查 Windows 用户环境变量
-    if cfg!(target_os = "windows") {
-        if let Ok(val) = std::env::var("ANTHROPIC_AUTH_TOKEN") {
-            return !val.is_empty();
+fn detect_program(command: &str) -> (bool, String, String) {
+    let shell = get_user_shell();
+    let shell_arg = "-lc";
+
+    let output = Command::new(&shell)
+        .args([shell_arg, command])
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if ver.is_empty() {
+                return (false, "未安装".to_string(), String::new());
+            }
+            // 尝试获取路径
+            let path = if command.starts_with("node") {
+                get_program_path("node")
+            } else if command.starts_with("npm") {
+                get_program_path("npm")
+            } else if command.starts_with("claude") {
+                get_program_path("claude")
+            } else {
+                String::new()
+            };
+            (true, ver, path)
         }
-        return false;
+        _ => (false, "未安装".to_string(), String::new()),
+    }
+}
+
+fn get_program_path(program: &str) -> String {
+    let shell = get_user_shell();
+    let output = Command::new(&shell)
+        .args(["-lc", &format!("command -v {}", program)])
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        }
+        _ => String::new(),
+    }
+}
+
+fn get_user_shell() -> String {
+    if let Ok(shell) = std::env::var("SHELL") {
+        shell
+    } else if cfg!(target_os = "macos") {
+        "/bin/zsh".to_string()
+    } else {
+        "/bin/bash".to_string()
+    }
+}
+
+fn check_env_vars_status() -> EnvVarsStatus {
+    let mut status = EnvVarsStatus {
+        auth_token_set: false,
+        base_url_set: false,
+        model_set: false,
+        all_set: false,
+        source: "未配置".to_string(),
+    };
+
+    // 读取当前进程环境变量
+    if let Ok(token) = std::env::var("ANTHROPIC_AUTH_TOKEN") {
+        if !token.is_empty() {
+            status.auth_token_set = true;
+            status.source = "进程环境变量".to_string();
+        }
+    }
+    if let Ok(url) = std::env::var("ANTHROPIC_BASE_URL") {
+        if !url.is_empty() {
+            status.base_url_set = true;
+        }
+    }
+    if let Ok(model) = std::env::var("ANTHROPIC_MODEL") {
+        if !model.is_empty() {
+            status.model_set = true;
+        }
     }
 
-    // macOS：检查 shell profile 中是否有 AIEnvKit 配置块
-    let shell_profile = get_shell_profile();
-    if let Ok(content) = std::fs::read_to_string(shell_profile) {
-        return content.contains("# AIEnvKit auto-generated config");
+    // 如果进程环境变量不完整，检查持久化配置
+    if !status.all_set {
+        check_persistent_env(&mut status);
     }
-    false
+
+    status.all_set = status.auth_token_set && status.base_url_set && status.model_set;
+    status
+}
+
+#[cfg(target_os = "windows")]
+fn check_persistent_env(status: &mut EnvVarsStatus) {
+    use std::process::Command;
+
+    // Windows：读取用户环境变量（通过注册表）
+    let keys = [
+        ("ANTHROPIC_AUTH_TOKEN", &mut status.auth_token_set),
+        ("ANTHROPIC_BASE_URL", &mut status.base_url_set),
+        ("ANTHROPIC_MODEL", &mut status.model_set),
+    ];
+
+    for (key, flag) in keys.iter_mut() {
+        if let Ok(output) = Command::new("powershell")
+            .args([
+                "-Command",
+                &format!(
+                    "[Environment]::GetEnvironmentVariable('{}', 'User')",
+                    key
+                ),
+            ])
+            .output()
+        {
+            let val = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !val.is_empty() {
+                **flag = true;
+            }
+        }
+    }
+
+    if status.auth_token_set && status.base_url_set && status.model_set {
+        status.source = "Windows 用户环境变量".to_string();
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn check_persistent_env(status: &mut EnvVarsStatus) {
+    let shell_profile = get_shell_profile();
+    let content = match std::fs::read_to_string(&shell_profile) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    if !content.contains("# AIEnvKit auto-generated config") {
+        return;
+    }
+
+    if content.contains("export ANTHROPIC_AUTH_TOKEN=") || content.contains("ANTHROPIC_AUTH_TOKEN=") {
+        status.auth_token_set = true;
+    }
+    if content.contains("export ANTHROPIC_BASE_URL=") || content.contains("ANTHROPIC_BASE_URL=") {
+        status.base_url_set = true;
+    }
+    if content.contains("export ANTHROPIC_MODEL=") || content.contains("ANTHROPIC_MODEL=") {
+        status.model_set = true;
+    }
+
+    if status.auth_token_set && status.base_url_set && status.model_set {
+        status.source = format!("Shell profile: {}", shell_profile.display());
+    }
+}
+
+fn check_env_configured() -> bool {
+    check_env_vars_status().all_set
 }
 
 fn get_shell_profile() -> PathBuf {
@@ -289,6 +424,20 @@ fn get_shell_profile() -> PathBuf {
 }
 
 #[tauri::command]
+async fn install_node(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    mirror: String,
+    proxy: String,
+) -> Result<String, String> {
+    let mirror = mirror.trim();
+    let proxy = proxy.trim();
+    let args: Vec<&str> = vec![mirror, proxy];
+
+    run_script(&app, Some(&window), "install-node", &args).await
+}
+
+#[tauri::command]
 async fn open_node_download_page(app: tauri::AppHandle) -> Result<(), String> {
     let shell = app.shell();
     shell
@@ -308,6 +457,7 @@ fn main() {
             restore_backup,
             get_claude_path,
             check_environment,
+            install_node,
             open_node_download_page,
         ])
         .run(tauri::generate_context!())

@@ -1,13 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <circle cx="64" cy="64" r="60" fill="url(#grad)" />
-  <circle cx="48" cy="54" r="8" fill="white" />
-  <circle cx="80" cy="54" r="8" fill="white" />
-  <path d="M 42 78 Q 64 96 86 78" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" />
-  <rect x="34" y="34" width="60" height="60" rx="12" stroke="white" stroke-width="4" fill="none" />
+  <!-- 蓝底圆角方形 -->
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="url(#bgGrad)" />
+  <!-- 环绕轨迹 -->
+  <path d="M 22 64 Q 22 28 64 28 Q 106 28 106 64" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9" />
+  <path d="M 106 64 Q 106 100 64 100 Q 22 100 22 64" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6" />
+  <!-- 显示器 -->
+  <rect x="32" y="38" width="64" height="44" rx="6" fill="white" />
+  <rect x="36" y="42" width="56" height="32" rx="4" fill="#38bdf8" />
+  <!-- 显示器底座 -->
+  <path d="M 56 82 L 52 92 L 76 92 L 72 82 Z" fill="white" />
+  <rect x="44" y="90" width="40" height="4" rx="2" fill="white" />
+  <!-- > AI 文字 -->
+  <text x="46" y="64" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="bold" fill="white">&gt; AI</text>
 </svg>

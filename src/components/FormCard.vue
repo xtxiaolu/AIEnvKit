@@ -54,7 +54,7 @@ function updateField<K extends keyof ConfigForm>(key: K, value: ConfigForm[K]) {
     </div>
 
     <!-- 模型名称 -->
-    <div>
+    <div class="mb-4">
       <label class="block text-sm font-semibold text-slate-800 mb-2">模型名称</label>
       <input
         type="text"
@@ -63,6 +63,34 @@ function updateField<K extends keyof ConfigForm>(key: K, value: ConfigForm[K]) {
         class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
         @input="updateField('modelName', ($event.target as HTMLInputElement).value)"
       />
+    </div>
+
+    <!-- 高级选项：npm 镜像与代理 -->
+    <div class="pt-3 border-t border-slate-100">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5">npm 镜像</label>
+          <select
+            :value="modelValue.npmMirror"
+            class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+            @change="updateField('npmMirror', ($event.target as HTMLSelectElement).value)"
+          >
+            <option value="official">官方</option>
+            <option value="npmmirror">淘宝镜像</option>
+            <option value="tencent">腾讯镜像</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1.5">代理 (可选)</label>
+          <input
+            type="text"
+            :value="modelValue.proxy"
+            placeholder="http://127.0.0.1:7890"
+            class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            @input="updateField('proxy', ($event.target as HTMLInputElement).value)"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -4,6 +4,8 @@ set -e
 API_KEY="$1"
 BASE_URL="$2"
 MODEL_NAME="$3"
+NPM_MIRROR="${4:-official}"
+PROXY="${5:-}"
 
 if [ -z "$API_KEY" ] || [ -z "$BASE_URL" ] || [ -z "$MODEL_NAME" ]; then
   echo "❌ API Key、API 地址和模型名称不能为空"
@@ -16,6 +18,13 @@ DEFAULT_SONNET_MODEL="${MODEL_NAME}"
 DEFAULT_HAIKU_MODEL="${MODEL_NAME}"
 SUBAGENT_MODEL="${MODEL_NAME}"
 
+# 优先使用本地 Node.js（一键安装目录）
+LOCAL_NODE_DIR="$HOME/.aienvkit/node/bin"
+if [ -f "$LOCAL_NODE_DIR/node" ] && [ -f "$LOCAL_NODE_DIR/npm" ]; then
+  export PATH="$LOCAL_NODE_DIR:$PATH"
+  echo "✔ 使用本地 Node.js: ${LOCAL_NODE_DIR}"
+fi
+
 # 1. 检测 node 和 npm
 if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
   echo "❌ 未检测到 Node.js 或 npm，请先安装 Node.js"
@@ -27,6 +36,26 @@ echo "✔ npm 已安装: $(npm --version)"
 
 # 2. 安装/升级 Claude Code CLI
 echo "📦 正在安装/升级 Claude Code CLI..."
+
+# 设置 npm 镜像
+if [ "$NPM_MIRROR" = "npmmirror" ]; then
+  echo "🌐 使用 npm 淘宝镜像 (npmmirror.com)"
+  npm config set registry https://registry.npmmirror.com
+elif [ "$NPM_MIRROR" = "tencent" ]; then
+  echo "🌐 使用腾讯 npm 镜像"
+  npm config set registry https://mirrors.cloud.tencent.com/npm/
+elif [ -n "$NPM_MIRROR" ] && [ "$NPM_MIRROR" != "official" ]; then
+  echo "🌐 使用自定义 npm 镜像: ${NPM_MIRROR}"
+  npm config set registry "${NPM_MIRROR}"
+fi
+
+# 设置代理
+if [ -n "$PROXY" ]; then
+  echo "🔌 使用代理: ${PROXY}"
+  npm config set proxy "${PROXY}"
+  npm config set https-proxy "${PROXY}"
+fi
+
 npm install -g @anthropic-ai/claude-code
 echo "✔ Claude Code CLI 已就绪"
 
@@ -79,6 +108,10 @@ fi
 {
   echo ""
   echo "$MARKER"
+  echo "# 优先使用 AIEnvKit 本地 Node.js"
+  echo "if [ -d \"$HOME/.aienvkit/node/bin\" ]; then"
+  echo "  export PATH=\"$HOME/.aienvkit/node/bin:\$PATH\""
+  echo "fi"
   echo "export ANTHROPIC_AUTH_TOKEN=\"$API_KEY\""
   echo "export ANTHROPIC_BASE_URL=\"$BASE_URL\""
   echo "export ANTHROPIC_MODEL=\"$MODEL_NAME\""

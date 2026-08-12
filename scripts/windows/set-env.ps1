@@ -1,4 +1,3 @@
-# AIEnvKit Windows 环境配置脚本
 param(
     [Parameter(Mandatory = $true)]
     [string]$ApiKey,
@@ -7,7 +6,11 @@ param(
     [string]$BaseUrl,
 
     [Parameter(Mandatory = $true)]
-    [string]$ModelName
+    [string]$ModelName,
+
+    [string]$NpmMirror = "official",
+
+    [string]$Proxy = ""
 )
 
 if ([string]::IsNullOrWhiteSpace($ApiKey) -or [string]::IsNullOrWhiteSpace($BaseUrl) -or [string]::IsNullOrWhiteSpace($ModelName)) {
@@ -20,6 +23,13 @@ Write-Host "🚀 AIEnvKit 开始配置 Claude 环境..." -ForegroundColor Cyan
 $DefaultSonnetModel = $ModelName
 $DefaultHaikuModel = $ModelName
 $SubagentModel = $ModelName
+
+# 优先使用本地 Node.js（一键安装目录）
+$LocalNodeDir = Join-Path $env:USERPROFILE ".aienvkit\node"
+if (Test-Path (Join-Path $LocalNodeDir "node.exe")) {
+    $env:PATH = "$LocalNodeDir;$env:PATH"
+    Write-Host "✔ 使用本地 Node.js: ${LocalNodeDir}" -ForegroundColor Green
+}
 
 # 1. 检测 Node.js / npm 并安装/升级 Claude Code CLI
 $NodeCmd = Get-Command "node" -ErrorAction SilentlyContinue
@@ -34,6 +44,26 @@ Write-Host "✔ Node.js 已安装: $(node --version)" -ForegroundColor Green
 Write-Host "✔ npm 已安装: $(npm --version)" -ForegroundColor Green
 
 Write-Host "📦 正在安装/升级 Claude Code CLI..." -ForegroundColor Yellow
+
+# 设置 npm 镜像
+if ($NpmMirror -eq "npmmirror") {
+    Write-Host "🌐 使用 npm 淘宝镜像 (npmmirror.com)" -ForegroundColor Cyan
+    npm config set registry https://registry.npmmirror.com
+} elseif ($NpmMirror -eq "tencent") {
+    Write-Host "🌐 使用腾讯 npm 镜像" -ForegroundColor Cyan
+    npm config set registry https://mirrors.cloud.tencent.com/npm/
+} elseif (-not [string]::IsNullOrWhiteSpace($NpmMirror) -and $NpmMirror -ne "official") {
+    Write-Host "🌐 使用自定义 npm 镜像: ${NpmMirror}" -ForegroundColor Cyan
+    npm config set registry $NpmMirror
+}
+
+# 设置代理
+if (-not [string]::IsNullOrWhiteSpace($Proxy)) {
+    Write-Host "🔌 使用代理: ${Proxy}" -ForegroundColor Cyan
+    npm config set proxy $Proxy
+    npm config set https-proxy $Proxy
+}
+
 try {
     npm install -g @anthropic-ai/claude-code
     Write-Host "✔ Claude Code CLI 已就绪" -ForegroundColor Green
@@ -86,6 +116,11 @@ $ProfileContent = [regex]::Replace($ProfileContent, $Pattern, "").Trim()
 $NewBlock = @"
 
 $Marker
+# 优先使用 AIEnvKit 本地 Node.js
+`$LocalNodePath = Join-Path `$env:USERPROFILE ".aienvkit\node"
+if (Test-Path (Join-Path `$LocalNodePath "node.exe")) {
+    `$env:PATH = "`$LocalNodePath;`$env:PATH"
+}
 `$env:ANTHROPIC_AUTH_TOKEN = "$ApiKey"
 `$env:ANTHROPIC_BASE_URL = "$BaseUrl"
 `$env:ANTHROPIC_MODEL = "$ModelName"

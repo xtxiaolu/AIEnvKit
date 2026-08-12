@@ -1,7 +1,6 @@
 <script setup lang="ts">
 defineProps<{
   variant: "primary" | "secondary";
-  icon?: string;
   loading?: boolean;
   disabled?: boolean;
 }>();
@@ -23,7 +22,39 @@ defineEmits<{
     @click="$emit('click')"
   >
     <span v-if="loading" class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-    <span v-else-if="icon" class="text-base">{{ icon }}</span>
+    <svg
+      v-else-if="variant === 'secondary'"
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 22v-5" />
+      <path d="M9 8V2" />
+      <path d="M15 8V2" />
+      <path d="M18 8v3a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V8" />
+      <path d="M9 8a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3" />
+    </svg>
+    <svg
+      v-else
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
     <span><slot /></span>
   </button>
 </template>
