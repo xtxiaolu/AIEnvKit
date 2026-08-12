@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-Generate macOS .icns and Windows .ico from a source image.
-The source image contains a rounded-square icon with transparent corners.
-We crop a centered square and fill the transparent corners by extrapolating
-from the *inner* part of the rounded square (ignoring the outer glow/highlight),
-so the corners blend naturally without a visible seam.
+Generate all application icons from source-icon.png.
+
+The source image is expected to contain a rounded-square icon with transparent
+or semi-transparent corners (e.g. a glow on a transparent background). We crop
+to the visible bounds of that icon, center it on a transparent square canvas,
+and emit square PNGs/ICNS/ICO that keep the rounded outline instead of filling
+the corners with a solid color.
 """
+import io
 import os
+import struct
 import sys
 from pathlib import Path
+
 import numpy as np
 from PIL import Image
 
@@ -19,95 +24,130 @@ if not SOURCE.exists():
     print(f"Source icon not found: {SOURCE}")
     sys.exit(1)
 
-img = Image.open(SOURCE).convert("RGBA")
-w, h = img.size
 
-# Crop the largest centered square
-size = min(w, h)
-left = (w - size) // 2
-top = (h - size) // 2
+def crop_to_fill_square(
+    img: Image.Image, target_size: int = 1024, alpha_threshold: int = 20
+) -> Image.Image:
+    """Crop to the visible icon and scale it so the icon fills the square canvas."""
+    arr = np.array(img.convert("RGBA"))
+    alpha = arr[:, :, 3]
+
+    visible = alpha > alpha_threshold
+    if not np.any(visible):
+        raise ValueError("Source image appears to be fully transparent")
+
+    ys, xs = np.where(visible)
+    left = int(xs.min())
+    top = int(ys.min())
+    right = int(xs.max()) + 1
+    bottom = int(ys.max()) + 1
+
+    cropped = img.crop((left, top, right, bottom))
+    crop_w, crop_h = cropped.size
+
+    # Scale so the smaller dimension of the crop fills the target square,
+    # then center-crop the excess. This makes the icon extend to the edges
+    # without leaving transparent margins.
+    scale = target_size / min(crop_w, crop_h)
+    scaled_w = int(round(crop_w * scale))
+    scaled_h = int(round(crop_h * scale))
+    scaled = cropped.resize((scaled_w, scaled_h), Image.LANCZOS)
+
+    square = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+    offset_x = (target_size - scaled_w) // 2
+    offset_y = (target_size - scaled_h) // 2
+    square.paste(scaled, (offset_x, offset_y), scaled)
+    return square
+
+
+def save_ico(path: Path, images: list[Image.Image]) -> None:
+    """Write a multi-size Windows ICO file using PNG-encoded frames.
+
+    Pillow's built-in ICO writer in this environment only preserves a single
+    frame when append_images is used, so we assemble the ICO container manually.
+    """
+    png_bytes = []
+    for img in images:
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        png_bytes.append(buf.getvalue())
+
+    count = len(images)
+    with open(path, "wb") as f:
+        # ICONDIR: reserved(2), type(2), count(2)
+        f.write(struct.pack("<HHH", 0, 1, count))
+
+        # ICONDIRENTRY list
+        offset = 6 + 16 * count
+        for img, data in zip(images, png_bytes):
+            w, h = img.size
+            wb = w if w < 256 else 0
+            hb = h if h < 256 else 0
+            f.write(struct.pack("<BBBBHHII", wb, hb, 0, 0, 1, 32, len(data), offset))
+            offset += len(data)
+
+        # Image data
+        for data in png_bytes:
+            f.write(data)
+
+
+# ---------------------------------------------------------------------------
+# Build the master transparent square from source-icon.png
+# ---------------------------------------------------------------------------
+img = Image.open(SOURCE).convert("RGBA")
+print(f"Source size: {img.size}")
+
+# Start from the largest centered square so the icon is centered and balanced
+size = min(img.size)
+left = (img.width - size) // 2
+top = (img.height - size) // 2
 square = img.crop((left, top, left + size, top + size))
 
-# Work at 512x512 for speed/quality balance
-work_size = 512
-square_small = square.resize((work_size, work_size), Image.LANCZOS)
-arr = np.array(square_small).astype(np.float32)
-alpha = arr[:, :, 3]
+# Crop tightly to the visible icon and scale it to fill a transparent square
+master = crop_to_fill_square(square, target_size=1024)
+print(f"Master square size: {master.size}")
 
-# Original shape mask
-shape_mask = alpha > 20.0
-
-# Inner mask: erode shape to avoid the outer glow/highlight ring
-try:
-    from scipy.ndimage import binary_erosion
-    inner_mask = binary_erosion(shape_mask, iterations=10)
-except ImportError:
-    inner_mask = shape_mask.copy()
-    for _ in range(10):
-        padded = np.pad(inner_mask, 1, mode='constant', constant_values=False)
-        inner_mask = (
-            padded[0:-2, 1:-1] & padded[1:-1, 0:-2] & padded[1:-1, 1:-1]
-            & padded[1:-1, 2:] & padded[2:, 1:-1]
-        )
-
-# Use the average color of the inner area as the corner fill
-avg_r = int(np.median(arr[inner_mask, 0]))
-avg_g = int(np.median(arr[inner_mask, 1]))
-avg_b = int(np.median(arr[inner_mask, 2]))
-print(f"Corner fill color (median inner): ({avg_r}, {avg_g}, {avg_b})")
-
-out = arr.copy()
-out[:, :, 3] = 255.0
-
-# Fill transparent corners with the solid inner color
-fill_mask = ~shape_mask
-out[fill_mask, 0] = avg_r
-out[fill_mask, 1] = avg_g
-out[fill_mask, 2] = avg_b
-
-# Convert to image and scale to final size
-filled_img_small = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
-filled_img = filled_img_small.resize((size, size), Image.LANCZOS)
-
-# Save new square source
+# Save the new square source (transparent corners, no fill)
 new_source = ICONS_DIR / "source-icon-square.png"
-filled_img.save(new_source)
+master.save(new_source)
 print(f"Saved square source: {new_source}")
 
-# Generate sizes (skip 32 and 128; we create 32x32.png and 128x128.png separately)
+# ---------------------------------------------------------------------------
+# Generate PNG sizes
+# ---------------------------------------------------------------------------
 SIZES = [16, 64, 256, 512, 1024]
 for s in SIZES:
-    resized = filled_img.resize((s, s), Image.LANCZOS)
-    resized.save(ICONS_DIR / f"icon-{s}.png")
+    master.resize((s, s), Image.LANCZOS).save(ICONS_DIR / f"icon-{s}.png")
     print(f"Saved icon-{s}.png")
 
 # 32x32 and 128x128 named files used by tauri.conf.json
-filled_img.resize((32, 32), Image.LANCZOS).save(ICONS_DIR / "32x32.png")
+master.resize((32, 32), Image.LANCZOS).save(ICONS_DIR / "32x32.png")
 print("Saved 32x32.png")
-filled_img.resize((128, 128), Image.LANCZOS).save(ICONS_DIR / "128x128.png")
+master.resize((128, 128), Image.LANCZOS).save(ICONS_DIR / "128x128.png")
 print("Saved 128x128.png")
 
+# ---------------------------------------------------------------------------
 # Generate .icns for macOS
+# ---------------------------------------------------------------------------
 iconset_dir = ICONS_DIR / "icon.iconset"
 iconset_dir.mkdir(exist_ok=True)
 for s in [16, 32, 64, 128, 256, 512, 1024]:
-    filled_img.resize((s, s), Image.LANCZOS).save(iconset_dir / f"icon_{s}x{s}.png")
+    master.resize((s, s), Image.LANCZOS).save(iconset_dir / f"icon_{s}x{s}.png")
     if s <= 512:
-        filled_img.resize((s * 2, s * 2), Image.LANCZOS).save(iconset_dir / f"icon_{s}x{s}@2x.png")
+        master.resize((s * 2, s * 2), Image.LANCZOS).save(
+            iconset_dir / f"icon_{s}x{s}@2x.png"
+        )
 
 os.system(f"iconutil -c icns -o {ICONS_DIR / 'icon.icns'} {iconset_dir}")
 os.system(f"rm -rf {iconset_dir}")
-print(f"Generated icon.icns")
+print("Generated icon.icns")
 
+# ---------------------------------------------------------------------------
 # Generate .ico for Windows
+# ---------------------------------------------------------------------------
 ico_sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-frames = [filled_img.resize(s, Image.LANCZOS) for s in ico_sizes]
-frames[0].save(
-    ICONS_DIR / "icon.ico",
-    format="ICO",
-    sizes=ico_sizes,
-    append_images=frames[1:],
-)
-print(f"Generated icon.ico")
+ico_frames = [master.resize(s, Image.LANCZOS) for s in ico_sizes]
+save_ico(ICONS_DIR / "icon.ico", ico_frames)
+print("Generated icon.ico")
 
 print("Done.")
