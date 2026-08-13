@@ -126,13 +126,13 @@ AIEnvKit 是一个面向普通用户的 Claude Code 环境一键配置工具。�
 
 #### macOS
 
-- Apple Silicon 用户下载 \`AIEnvKit_${TAG}_macOS_Apple_Silicon.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
-- Intel 用户下载 \`AIEnvKit_${TAG}_macOS_Intel.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
+- Apple Silicon 用户下载 \`AIEnvKit_${VERSION}_macOS_Apple_Silicon.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
+- Intel 用户下载 \`AIEnvKit_${VERSION}_macOS_Intel.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
 - 首次打开若提示安全警告，请前往「系统设置 → 隐私与安全性」点击「仍要打开」。
 
 #### Windows
 
-- 下载 \`AIEnvKit_${TAG}_Windows_x64_Setup.exe\`，双击运行安装向导。
+- 下载 \`AIEnvKit_${VERSION}_Windows_x64_Setup.exe\`，双击运行安装向导。
 - 首次运行若提示「Windows 已保护你的电脑」，请点击「更多信息」→「仍要运行」。
 
 ### 快速配置示例（DeepSeek）
@@ -142,8 +142,6 @@ AIEnvKit 是一个面向普通用户的 Claude Code 环境一键配置工具。�
 - **API Key**：填写你自己的 Key
 
 没有梯子（VPN/代理）的用户请不要填写「代理」字段，保持为空即可。
-
-### 校验和
 
 EOF
 else
@@ -166,22 +164,15 @@ else
 
 #### macOS
 
-- Apple Silicon 用户下载 \`AIEnvKit_${TAG}_macOS_Apple_Silicon.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
-- Intel 用户下载 \`AIEnvKit_${TAG}_macOS_Intel.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
+- Apple Silicon 用户下载 \`AIEnvKit_${VERSION}_macOS_Apple_Silicon.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
+- Intel 用户下载 \`AIEnvKit_${VERSION}_macOS_Intel.zip\`，解压后将 \`AIEnvKit.app\` 拖入「应用程序」文件夹。
 
 #### Windows
 
-- 下载 \`AIEnvKit_${TAG}_Windows_x64_Setup.exe\`，双击运行安装向导。
-
-### 校验和
+- 下载 \`AIEnvKit_${VERSION}_Windows_x64_Setup.exe\`，双击运行安装向导。
 
 EOF
 fi
-
-# 计算并追加校验和
-cd "$RELEASE_DIR"
-sha256sum "${ASSET_PREFIX}"_* >> "$NOTES_FILE"
-cd "$PROJECT_ROOT"
 
 echo ""
 echo "Release Notes 已生成：$NOTES_FILE"
